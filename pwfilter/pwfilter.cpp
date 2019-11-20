@@ -111,15 +111,12 @@ WriteMemoryCallback(void* contents, size_t size, size_t nmemb, void* userp)
 }
 BOOLEAN checkHibp(PUNICODE_STRING Password)
 {
-
-	PWSTR pwbuffer = Password->Buffer;
-	wstring wPassword(pwbuffer);
+	wstring wPassword(Password->Buffer);
+	SecureZeroMemory(Password, Password->Length);
 	using convert_type = codecvt_utf8<wchar_t>;
 	wstring_convert<convert_type, wchar_t> converter;
 	string sPassword = converter.to_bytes(wPassword);
-	outFile(sPassword);
 	string sha1Hash = makeShaHash(sPassword);
-
 	string ppUrl = "https://api.pwnedpasswords.com/range/"+sha1Hash.substr(0, 5);
 	CURL* curl;
 	CURLcode res;
@@ -170,6 +167,7 @@ BOOLEAN checkHibp(PUNICODE_STRING Password)
 		/* we're done with libcurl, so clean it up */
 		curl_global_cleanup();
 		// return true if no match was found, else return false
+
 		if (hashmatch == string::npos)
 			return TRUE;
 		else
@@ -193,5 +191,7 @@ PWFILTER_API BOOLEAN __stdcall PasswordFilter(
 )
 {
 	outFile("Entered PasswordFilter");
-	return checkHibp(Password);
+	bool res = checkHibp(Password);
+	SecureZeroMemory(Password,Password->Length);
+	return res;
 }
